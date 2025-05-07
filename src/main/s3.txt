@@ -78,3 +78,19 @@ public class S3DownloadJob {
 app.s3.bucket=seu-bucket
 app.s3.key=caminho/do/modelo.onnx
 app.file.path=/caminho/local/modelo.onnx
+
+
+
+aws --profile localstack --endpoint-url=http://localhost:4566 s3 mb s3://meu-bucket-local
+aws --endpoint-url=http://localhost:4566 s3 mb s3://meu-bucket-local
+
+
+aws --profile localstack --endpoint-url=http://localhost:4566 s3 cp testfile.onnx s3://meu-bucket-local/caminho/do/testfile.onnx
+
+# No Linux/Mac
+dd if=/dev/zero of=testfile.onnx bs=1M count=1
+# Isso cria um arquivo de 1 MB chamado testfile.onnx
+
+# No Windows (usando PowerShell)
+$size = 1MB
+[IO.File]::WriteAllBytes("testfile.onnx", (new-object byte[] $size))
