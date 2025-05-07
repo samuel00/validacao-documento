@@ -28,6 +28,7 @@ dependencies {
 
     implementation 'com.microsoft.onnxruntime:onnxruntime:1.18.0'
     implementation 'ai.djl.huggingface:tokenizers:0.30.0'
+    implementation "com.amazon:aws-java-sdk-s3"
 
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'

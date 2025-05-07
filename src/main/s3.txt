@@ -1,0 +1,83 @@
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+@Component
+public class S3DownloadJob {
+
+    private final S3Client s3Client;
+
+    @Value("${app.s3.bucket}")
+    private String bucketName;
+
+    @Value("${app.s3.key}")
+    private String s3Key;
+
+    @Value("${app.file.path}")
+    private String localFilePath;
+
+    public S3DownloadJob(S3Client s3Client) {
+        this.s3Client = s3Client;
+    }
+
+    @Scheduled(cron = "0 0 8 * * ?")
+    public void downloadFileFromS3() {
+        System.out.println("Iniciando download do S3 às " + LocalDateTime.now());
+
+        // Criar o diretório de destino, se não existir
+        File file = new File(localFilePath);
+        File parentDir = file.getParentFile();
+        if (!parentDir.exists() && !parentDir.mkdirs()) {
+            System.err.println("Falha ao criar o diretório: " + parentDir.getAbsolutePath());
+            return;
+        }
+
+        try {
+            // Configurar o request para buscar o arquivo no S3
+            GetObjectRequest getObjectRequest = GetObjectRequest.builder()
+                .bucket(bucketName)
+                .key(s3Key)
+                .build();
+
+            // Fazer o download do arquivo em streaming
+            try (ResponseInputStream<GetObjectResponse> s3Object = s3Client.getObject(getObjectRequest);
+                 FileOutputStream fos = new FileOutputStream(file)) {
+                byte[] buffer = new byte[8192]; // Buffer de 8 KB
+                int bytesRead;
+                long totalBytesRead = 0;
+                while ((bytesRead = s3Object.read(buffer)) != -1) {
+                    fos.write(buffer, 0, bytesRead);
+                    totalBytesRead += bytesRead;
+                    if (totalBytesRead % (1024 * 1024 * 10) == 0) { // A cada 10 MB
+                        System.out.println("Baixados " + (totalBytesRead / (1024 * 1024)) + " MB");
+                    }
+                }
+            }
+
+            System.out.println("Arquivo .onnx baixado do S3 e salvo em: " + file.getAbsolutePath() + " às " + LocalDateTime.now());
+        } catch (IOException e) {
+            System.err.println("Erro ao baixar o arquivo do S3: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Erro inesperado: " + e.getMessage());
+        }
+    }
+
+    public String getLocalFilePath() {
+        return localFilePath;
+    }
+}
+
+
+app.s3.bucket=seu-bucket
+app.s3.key=caminho/do/modelo.onnx
+app.file.path=/caminho/local/modelo.onnx
