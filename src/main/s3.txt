@@ -75,6 +75,63 @@ public class S3DownloadJob {
 }
 
 
+
+public void processOnnxModel() {
+        System.out.println("Iniciando processamento do modelo .onnx às " + LocalDateTime.now());
+
+        // Obter o caminho do arquivo baixado
+        String filePath = s3DownloadJob.getLocalFilePath();
+        File file = new File(filePath);
+
+        // Verificar se o arquivo existe
+        if (!file.exists()) {
+            System.err.println("Arquivo .onnx não encontrado: " + filePath);
+            return;
+        }
+
+        // Carregar e usar o modelo .onnx
+        try (OrtEnvironment env = OrtEnvironment.getEnvironment();
+             OrtSession session = env.createSession(filePath)) {
+
+            // Exibir informações do modelo (opcional)
+            System.out.println("Entradas do modelo: " + session.getInputNames());
+            System.out.println("Saídas do modelo: " + session.getOutputNames());
+
+            // Preparar dados de entrada para inferência (exemplo)
+            // Substitua isso pelos dados reais que seu modelo espera
+            float[] inputData = new float[]{1.0f, 2.0f, 3.0f, 4.0f}; // Exemplo de entrada
+            long[] inputShape = new long[]{1, inputData.length}; // Exemplo de formato [batch_size, features]
+            try (OnnxTensor inputTensor = OnnxTensor.createTensor(env, FloatBuffer.wrap(inputData), inputShape)) {
+                Map<String, OnnxTensor> inputs = new HashMap<>();
+                String inputName = session.getInputNames().iterator().next(); // Pega o nome da primeira entrada
+                inputs.put(inputName, inputTensor);
+
+                // Fazer a inferência
+                try (OrtSession.Result results = session.run(inputs)) {
+                    String outputName = session.getOutputNames().iterator().next(); // Pega o nome da primeira saída
+                    float[] outputData = (float[]) results.get(outputName).getValue();
+                    System.out.println("Resultado da inferência: ");
+                    for (float value : outputData) {
+                        System.out.print(value + " ");
+                    }
+                    System.out.println();
+                }
+            }
+
+            System.out.println("Modelo .onnx processado com sucesso às " + LocalDateTime.now());
+        } catch (OrtException e) {
+            System.err.println("Erro ao carregar ou usar o modelo .onnx: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Erro inesperado: " + e.getMessage());
+        }
+    }
+
+
+
+
+
+
+
 app.s3.bucket=seu-bucket
 app.s3.key=caminho/do/modelo.onnx
 app.file.path=/caminho/local/modelo.onnx
